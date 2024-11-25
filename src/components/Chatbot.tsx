@@ -1,28 +1,31 @@
+'use client'
+
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Loader, Upload } from 'lucide-react';
+import { MessageCircle, Send, X, Loader, PhoneCall, Wifi, FileText, HelpCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Message {
-  type: 'user' | 'bot';
-  content: string;
-  timestamp: Date;
-}
-
-interface KnowledgeBase {
-  content: string;
-  loaded: boolean;
-}
+import { useChatState } from './hooks/useChatState';
+import { Message, Action } from './types';
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase>({
-    content: '',
-    loaded: false
-  });
+  const {
+    messages,
+    input,
+    setInput,
+    isTyping,
+    chatbotState,
+    handleSubmit,
+    initChatbot,
+    performAction,
+  } = useChatState();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,71 +35,16 @@ export default function Chatbot() {
     scrollToBottom();
   }, [messages]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || file.type !== 'application/pdf') {
-      alert('Por favor, sube un archivo PDF válido.');
-      return;
+  useEffect(() => {
+    if (isOpen && !chatbotState.isReady) {
+      initChatbot();
     }
+  }, [isOpen, chatbotState.isReady, initChatbot]);
 
-    try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-
-      // Simular la carga del PDF y extracción del texto
-      setKnowledgeBase({
-        content: 'Base de conocimientos cargada exitosamente.',
-        loaded: true
-      });
-
-      addMessage('bot', '¡PDF cargado exitosamente! Ahora puedo ayudarte con preguntas sobre el manual técnico.');
-    } catch (error) {
-      console.error('Error al cargar el PDF:', error);
-      alert('Error al cargar el archivo. Por favor, intenta nuevamente.');
-    }
-  };
-
-  const addMessage = (type: 'user' | 'bot', content: string) => {
-    setMessages(prev => [...prev, { type, content, timestamp: new Date() }]);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
-
-    const userMessage = input.trim();
+    handleSubmit(input);
     setInput('');
-    addMessage('user', userMessage);
-    setIsTyping(true);
-
-    // Simular respuesta del chatbot
-    setTimeout(() => {
-      let response = '';
-
-      if (!knowledgeBase.loaded) {
-        response = 'Por favor, carga primero el manual técnico en PDF para poder ayudarte mejor.';
-      } else {
-        // Aquí implementarías la lógica real de búsqueda en la base de conocimientos
-        const commonResponses: { [key: string]: string } = {
-          'internet': 'Para problemas de conexión, primero verifica que tu router esté encendido y los cables correctamente conectados. Si el problema persiste, intenta reiniciar el router.',
-          'velocidad': 'Si experimentas velocidad lenta, te recomiendo: 1) Realizar una prueba de velocidad, 2) Verificar la cantidad de dispositivos conectados, 3) Ubicar el router en un lugar central.',
-          'television': 'Para problemas con la señal de TV, verifica que los cables estén bien conectados y realiza una nueva búsqueda de canales en tu televisor.',
-          'factura': 'Puedes pagar tu factura a través de nuestra página web en la sección de pagos, o llamando a nuestro centro de atención al cliente.',
-          'contraseña': 'Para cambiar la contraseña de tu WiFi, accede a la configuración del router mediante la dirección IP 192.168.1.1 o contacta a soporte técnico.',
-        };
-
-        const matchingKey = Object.keys(commonResponses).find(key => 
-          userMessage.toLowerCase().includes(key)
-        );
-
-        response = matchingKey 
-          ? commonResponses[matchingKey]
-          : 'Entiendo tu consulta. Para brindarte una mejor asistencia, ¿podrías proporcionar más detalles sobre el problema que estás experimentando?';
-      }
-
-      setIsTyping(false);
-      addMessage('bot', response);
-    }, 1000);
   };
 
   return (
@@ -106,110 +54,254 @@ export default function Chatbot() {
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="mb-4 w-96 bg-white rounded-lg shadow-xl overflow-hidden"
+            exit={{ opacity:
+0, scale: 0.8, y: 20 }}
+            className={`mb-4 ${isExpanded ? 'w-[800px] h-[600px]' : 'w-[400px]'} bg-white rounded-lg shadow-xl overflow-hidden transition-all duration-300 ease-in-out`}
           >
-            {/* Header */}
-            <div className="bg-blue-600 p-4 flex justify-between items-center">
-              <h3 className="text-white font-semibold flex items-center">
-                <MessageCircle className="h-5 w-5 mr-2" />
-                Soporte Técnico
-              </h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Messages Container */}
-            <div className="h-96 overflow-y-auto p-4 bg-gray-50">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`mb-4 flex ${
-                    message.type === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.type === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-800 shadow'
-                    }`}
-                  >
-                    {message.content}
-                    <div
-                      className={`text-xs mt-1 ${
-                        message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
-                      }`}
-                    >
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
+            <Card className="h-full flex flex-col">
+              <CardHeader className="border-b flex justify-between items-center bg-blue-600 text-white">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <MessageCircle className="mr-2 h-6 w-6" />
+                  Asistente Virtual
+                </CardTitle>
+                <div className="flex space-x-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} className="text-white hover:bg-blue-700">
+                          {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{isExpanded ? 'Minimizar' : 'Expandir'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-white hover:bg-blue-700">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Cerrar</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow p-0">
+                <ScrollArea className={`h-full ${isExpanded ? 'max-h-[calc(600px-130px)]' : 'max-h-[400px]'}`}>
+                  <div className="p-4 space-y-4">
+                    <MessagesContainer 
+                      messages={messages} 
+                      isTyping={isTyping} 
+                      messagesEndRef={messagesEndRef} 
+                      performAction={performAction}
+                    />
                   </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex items-center text-gray-500 text-sm">
-                  <Loader className="h-4 w-4 mr-2 animate-spin" />
-                  Escribiendo...
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* PDF Upload */}
-            {!knowledgeBase.loaded && (
-              <div className="p-4 bg-blue-50 border-t border-blue-100">
-                <label className="flex items-center justify-center space-x-2 cursor-pointer">
-                  <Upload className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm text-blue-600">Cargar Manual Técnico (PDF)</span>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            )}
-
-            {/* Input Form */}
-            <form onSubmit={handleSubmit} className="p-4 border-t">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Escribe tu mensaje..."
-                  className="flex-1 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                </ScrollArea>
+              </CardContent>
+              <CardFooter className="border-t p-4">
+                <InputForm 
+                  input={input} 
+                  setInput={setInput} 
+                  onSubmit={onSubmit} 
+                  disabled={!chatbotState.isReady} 
                 />
-                <button
-                  type="submit"
-                  disabled={!input.trim()}
-                  className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="h-5 w-5" />
-                </button>
-              </div>
-            </form>
+              </CardFooter>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Toggle Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </motion.button>
+      <ToggleButton isOpen={isOpen} setIsOpen={setIsOpen} />
     </div>
   );
 }
+
+function MessagesContainer({ 
+  messages, 
+  isTyping, 
+  messagesEndRef,
+  performAction
+}: { 
+  messages: Message[], 
+  isTyping: boolean, 
+  messagesEndRef: React.RefObject<HTMLDivElement>,
+  performAction: (action: Action) => void
+}) {
+  return (
+    <>
+      {messages.map((message) => (
+        <MessageBubble key={message.id} message={message} performAction={performAction} />
+      ))}
+      {isTyping && <TypingIndicator />}
+      <div ref={messagesEndRef} />
+    </>
+  );
+}
+
+function MessageBubble({ message, performAction }: { message: Message, performAction: (action: Action) => void }) {
+  const [showActions, setShowActions] = useState(false);
+
+  const handleAction = (actionType: string) => {
+    switch (actionType) {
+      case 'PROVIDE_CONTACT':
+        performAction({ type: 'PROVIDE_CONTACT', payload: {} });
+        break;
+      case 'TROUBLESHOOT_INTERNET':
+        performAction({ type: 'TROUBLESHOOT_INTERNET', payload: {} });
+        break;
+      case 'EXPLAIN_BILL':
+        performAction({ type: 'EXPLAIN_BILL', payload: {} });
+        break;
+      default:
+        console.log('Acción no reconocida');
+    }
+  };
+
+  return (
+    <div
+      className={`flex ${
+        message.type === 'user' ? 'justify-end' : 'justify-start'
+      }`}
+    >
+      <div
+        className={`max-w-[80%] rounded-lg p-3 ${
+          message.type === 'user'
+            ? 'bg-blue-600 text-white'
+            : 'bg-gray-100 text-gray-800'
+        }`}
+        onMouseEnter={() => message.type === 'bot' && setShowActions(true)}
+        onMouseLeave={() => setShowActions(false)}
+      >
+        <div className="flex items-start">
+          {message.type === 'bot' && (
+            <Avatar className="w-8 h-8 mr-2">
+              <AvatarImage src="/bot-avatar.png" alt="Bot" />
+              <AvatarFallback>Bot</AvatarFallback>
+            </Avatar>
+          )}
+          <div>
+            <p className="text-base leading-relaxed">{message.content}</p>
+            <div className="text-xs mt-1 text-gray-400">
+              {message.timestamp.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          </div>
+        </div>
+        {message.type === 'bot' && showActions && (
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="outline" onClick={() => handleAction('PROVIDE_CONTACT')}>
+                    <PhoneCall className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Contactar servicio al cliente</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="outline" onClick={() => handleAction('TROUBLESHOOT_INTERNET')}>
+                    <Wifi className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Solucionar problemas de internet</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="outline" onClick={() => handleAction('EXPLAIN_BILL')}>
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explicar factura</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-center text-gray-500 text-sm">
+      <Loader className="h-4 w-4 mr-2 animate-spin" />
+      Escribiendo...
+    </div>
+  );
+}
+
+function InputForm({ 
+  input, 
+  setInput, 
+  onSubmit, 
+  disabled 
+}: { 
+  input: string, 
+  setInput: (value: string) => void, 
+  onSubmit: (e: React.FormEvent) => void, 
+  disabled: boolean 
+}) {
+  return (
+    <form onSubmit={onSubmit} className="flex w-full space-x-2">
+      <Input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Escriba su mensaje aquí..."
+        disabled={disabled}
+        className="flex-grow text-lg"
+      />
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button type="submit" disabled={!input.trim() || disabled} size="lg">
+              <Send className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Enviar mensaje</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </form>
+  );
+}
+
+function ToggleButton({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (value: boolean) => void }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="lg"
+            className="rounded-full shadow-lg bg-blue-600 hover:bg-blue-700"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <MessageCircle className="h-6 w-6" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{isOpen ? 'Cerrar chat' : 'Abrir chat'}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+

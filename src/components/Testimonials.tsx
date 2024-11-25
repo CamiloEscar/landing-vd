@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { useThemeValue } from '@/context/ThemeContext'
 
 interface Review {
   id: string
@@ -105,6 +106,10 @@ export default function GoogleReviewsSlider() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
 
+  const background = useThemeValue('bg-white', 'bg-gray-800'); // Cambia colores según el tema
+  const textColor = useThemeValue('text-gray-900', 'text-gray-100');
+  const cardShadow = useThemeValue('shadow-lg', 'shadow-none');
+
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault()
     const review: Review = {
@@ -136,7 +141,7 @@ export default function GoogleReviewsSlider() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-16 bg-gradient-to-b from-gray-50 to-white">
+    <div className={`max-w-4xl mx-auto px-4 py-16 ${background}`}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -144,7 +149,7 @@ export default function GoogleReviewsSlider() {
         className="flex items-center justify-between mb-8"
       >
         <div>
-          <h2 className="text-4xl font-bold text-gray-900">Video Digital</h2>
+          <h2 className={`text-4xl font-bold ${textColor}`}>Video Digital</h2>
           <div className="flex items-center mt-2">
             <div className="flex">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -158,13 +163,22 @@ export default function GoogleReviewsSlider() {
                 />
               ))}
             </div>
-            <span className="ml-2 text-2xl font-semibold text-gray-900">{averageRating.toFixed(1)}</span>
+            <span className={`ml-2 text-2xl font-semibold ${textColor}`}>{averageRating.toFixed(1)}</span>
             <span className="ml-2 text-gray-600">({reviews.length} reseñas)</span>
           </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <a
+          href="https://www.google.com/maps/place/Video+Digital/@-32.4888188,-58.2676553,17z/data=!4m8!3m7!1s0x95afdbbf7c420d65:0xde1b2afdc5796c68!8m2!3d-32.4888188!4d-58.2654666!9m1!1b1!16s%2Fg%2F11gr2scpf3?entry=ttu&g_ep=EgoyMDI0MTExOS4yIKXMDSoASAFQAw%3D%3D"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button variant="outline" className="hover:bg-gray-100 dark:hover:bg-gray-700">
+            Escribir una reseña
+          </Button>
+        </a>
+        {/* <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="bg-white hover:bg-gray-100">
+            <Button variant="outline" className={`hover:bg-gray-100 ${background}`}>
               <MessageSquare className="mr-2 h-4 w-4" />
               Escribir una reseña
             </Button>
@@ -216,7 +230,8 @@ export default function GoogleReviewsSlider() {
               <Button type="submit" className="w-full">Publicar reseña</Button>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
+
       </motion.div>
 
       <div className="relative">
@@ -228,15 +243,15 @@ export default function GoogleReviewsSlider() {
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.5 }}
           >
-            <Card className="w-full bg-white shadow-lg">
-              <CardContent className="p-6">
+            <Card className={`w-full ${cardShadow}`}>
+              <CardContent className={`p-6 ${background}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-xl font-semibold text-white">
                       {reviews[currentIndex].author_name[0]}
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-lg font-semibold text-gray-900">{reviews[currentIndex].author_name}</h3>
+                      <h3 className={`text-lg font-semibold ${textColor}`}>{reviews[currentIndex].author_name}</h3>
                       {reviews[currentIndex].author_type && (
                         <p className="text-sm text-gray-500">{reviews[currentIndex].author_type}</p>
                       )}
@@ -256,12 +271,12 @@ export default function GoogleReviewsSlider() {
                     />
                   ))}
                 </div>
-                <p className="mt-4 text-gray-700">{reviews[currentIndex].text}</p>
+                <p className={`mt-4 ${textColor}`}>{reviews[currentIndex].text}</p>
                 {reviews[currentIndex].reply && (
                   <div className="mt-4 pl-4 border-l-2 border-blue-500">
-                    <p className="font-semibold text-gray-900">{reviews[currentIndex].reply.author}</p>
+                    <p className={`font-semibold ${textColor}`}>{reviews[currentIndex].reply.author}</p>
                     <p className="text-sm text-gray-500">{reviews[currentIndex].reply.date}</p>
-                    <p className="mt-2 text-gray-700">{reviews[currentIndex].reply.text}</p>
+                    <p className={`mt-2 ${textColor}`}>{reviews[currentIndex].reply.text}</p>
                   </div>
                 )}
               </CardContent>
@@ -285,17 +300,6 @@ export default function GoogleReviewsSlider() {
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex justify-center mt-6">
-        {reviews.map((_, index) => (
-          <button
-            key={index}
-            className={`h-3 w-3 rounded-full mx-1 transition-all duration-300 ${
-              index === currentIndex ? 'bg-blue-600 scale-125' : 'bg-gray-300 hover:bg-gray-400'
-            }`}
-            onClick={() => setCurrentIndex(index)}
-          />
-        ))}
-      </div>
     </div>
-  )
+  );
 }
